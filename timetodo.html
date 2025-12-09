@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>上次是什麼時候？</title>
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --bg: #F3F4F6;
+            --card-bg: #FFFFFF;
+            --text-main: #1F2937;
+            --text-sub: #6B7280;
+            --danger: #EF4444;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; }
+
+        /* header */
+        header { background: var(--card-bg); padding: 15px; text-align: center; font-weight: bold; font-size: 1.2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); z-index: 10; }
+
+        /* Main Content Area */
+        main { flex: 1; overflow-y: auto; padding: 15px; padding-bottom: 80px; }
+
+        /* Pages */
+        .page { display: none; }
+        .page.active { display: block; }
+
+        /* Event Card */
+        .card { background: var(--card-bg); border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .event-title { font-size: 1.1rem; font-weight: 600; }
+        .time-elapsed { font-size: 1.5rem; font-weight: 800; color: var(--primary); margin: 10px 0; }
+        .last-date { font-size: 0.85rem; color: var(--text-sub); }
+
+        /* Buttons */
+        .btn { border: none; padding: 10px 15px; border-radius: 8px; font-size: 0.9rem; cursor: pointer; font-weight: 500; transition: opacity 0.2s; width: 100%; text-align: center; }
+        .btn:active { opacity: 0.7; }
+        .btn-primary { background-color: var(--primary); color: white; margin-top: 10px; }
+        .btn-outline { background-color: transparent; border: 1px solid #E5E7EB; color: var(--text-sub); margin-top: 8px; }
+        .btn-danger { background-color: var(--danger); color: white; margin-top: 20px; }
+
+        /* History Section */
+        .history-list { margin-top: 15px; border-top: 1px solid #E5E7EB; padding-top: 10px; display: none; }
+        .history-list.show { display: block; }
+        .history-item { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-sub); padding: 5px 0; border-bottom: 1px dashed #eee; }
+        .btn-del-history { color: var(--danger); background: none; border: none; cursor: pointer; font-size: 0.8rem; }
+
+        /* Modal (Add Event) */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 100; }
+        .modal.show { display: flex; }
+        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 85%; max-width: 300px; }
+        input[type="text"] { width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; margin: 15px 0; font-size: 1rem; }
+
+        /* Navbar */
+        .navbar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-top: 1px solid #E5E7EB; display: flex; justify-content: space-around; align-items: center; padding: 10px 0; padding-bottom: max(10px, env(safe-area-inset-bottom)); box-shadow: 0 -2px 10px rgba(0,0,0,0.03); }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-sub); font-size: 0.75rem; border: none; background: none; cursor: pointer; flex: 1; }
+        .nav-item.active { color: var(--primary); }
+        .nav-icon { font-size: 1.4rem; margin-bottom: 2px; }
+        
+        /* The Big Plus Button */
+        .nav-add-btn { background: var(--primary); color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; border: none; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4); transform: translateY(-15px); cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <header id="header-title">我的時間紀錄</header>
+
+    <main>
+        <div id="home-page" class="page active">
+            <div id="event-list"></div>
+            <div id="empty-state" style="text-align: center; color: #9CA3AF; margin-top: 50px; display: none;">
+                還沒有紀錄事項<br>點擊下方 + 新增一個吧！
+            </div>
+        </div>
+
+        <div id="settings-page" class="page">
+            <div class="card">
+                <div class="event-title">資料管理</div>
+                <p style="color: var(--text-sub); font-size: 0.9rem;">所有資料都儲存在您的瀏覽器中。</p>
+                <button class="btn btn-danger" onclick="clearAllData()">⚠️ 清除所有資料</button>
+            </div>
+            <div class="card">
+                <div class="event-title">關於</div>
+                <p style="color: var(--text-sub); font-size: 0.9rem;">這是一個簡易的時間追蹤工具，幫助你記憶上次做某件事的時間。</p>
+            </div>
+        </div>
+    </main>
+
+    <div id="add-modal" class="modal">
+        <div class="modal-content">
+            <div class="event-title">新增追蹤事項</div>
+            <input type="text" id="new-event-name" placeholder="例如：換床單、澆水...">
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-outline" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary" onclick="saveNewEvent()">確認新增</button>
+            </div>
+        </div>
+    </div>
+
+    <nav class="navbar">
+        <button class="nav-item active" onclick="switchPage('home')">
+            <span class="nav-icon">🏠</span>
+            <span>主頁</span>
+        </button>
+        <button class="nav-add-btn" onclick="openModal()">
+            +
+        </button>
+        <button class="nav-item" onclick="switchPage('settings')">
+            <span class="nav-icon">⚙️</span>
+            <span>設定</span>
+        </button>
+    </nav>
+
+    <script>
+        // --- 資料結構與初始化 ---
+        // Events Array: [{ id: 123, name: "澆水", logs: [timestamp1, timestamp2] }]
+        let events = JSON.parse(localStorage.getItem('myTimeTracker_events')) || [];
+
+        function saveToLocal() {
+            localStorage.setItem('myTimeTracker_events', JSON.stringify(events));
+            renderEvents();
+        }
+
+        // --- 時間格式化邏輯 ---
+        function formatDuration(ms) {
+            if (!ms) return "尚未執行";
+            const seconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (days > 0) return `${days}天 ${hours % 24}小時`;
+            if (hours > 0) return `${hours}小時 ${minutes % 60}分`;
+            if (minutes > 0) return `${minutes}分鐘前`;
+            return "剛剛";
+        }
+
+        function formatDate(timestamp) {
+            return new Date(timestamp).toLocaleString('zh-TW', { hour12: false });
+        }
+
+        // --- 核心功能 ---
+
+        // 1. 新增事件
+        function openModal() {
+            document.getElementById('add-modal').classList.add('show');
+            document.getElementById('new-event-name').focus();
+        }
+
+        function closeModal() {
+            document.getElementById('add-modal').classList.remove('show');
+            document.getElementById('new-event-name').value = '';
+        }
+
+        function saveNewEvent() {
+            const name = document.getElementById('new-event-name').value.trim();
+            if (!name) return alert('請輸入名稱');
+            
+            const newEvent = {
+                id: Date.now(),
+                name: name,
+                logs: [] // 初始沒有紀錄
+            };
+            
+            events.push(newEvent);
+            saveToLocal();
+            closeModal();
+            switchPage('home');
+        }
+
+        // 2. 紀錄時間 (打卡)
+        function logTime(id) {
+            const event = events.find(e => e.id === id);
+            if (event) {
+                event.logs.unshift(Date.now()); // 加到最前面
+                saveToLocal();
+            }
+        }
+
+        // 3. 刪除特定歷史紀錄
+        function deleteLog(eventId, logIndex) {
+            if(confirm('確定刪除這條紀錄嗎？')) {
+                const event = events.find(e => e.id === eventId);
+                event.logs.splice(logIndex, 1);
+                saveToLocal();
+            }
+        }
+
+        // 4. 刪除整個事件
+        function deleteEvent(id) {
+            if(confirm('確定刪除這個事件與所有紀錄嗎？')) {
+                events = events.filter(e => e.id !== id);
+                saveToLocal();
+            }
+        }
+
+        // 5. 切換歷史顯示
+        function toggleHistory(id) {
+            const el = document.getElementById(`history-${id}`);
+            if (el.style.display === 'block') {
+                el.style.display = 'none';
+            } else {
+                el.style.display = 'block';
+            }
+        }
+
+        // --- 渲染畫面 (UI) ---
+        function renderEvents() {
+            const list = document.getElementById('event-list');
+            const emptyState = document.getElementById('empty-state');
+            
+            list.innerHTML = '';
+            
+            if (events.length === 0) {
+                emptyState.style.display = 'block';
+                return;
+            } else {
+                emptyState.style.display = 'none';
+            }
+
+            // 根據上次執行時間排序 (越久沒做的排越上面? 或者固定的? 這裡暫設為固定新增順序，可改)
+            events.forEach(evt => {
+                const lastLog = evt.logs.length > 0 ? evt.logs[0] : null;
+                const timeDiff = lastLog ? Date.now() - lastLog : null;
+                const displayTime = lastLog ? formatDuration(timeDiff) : "尚未執行";
+                
+                // 歷史紀錄 HTML
+                let historyHtml = '';
+                evt.logs.forEach((log, index) => {
+                    historyHtml += `
+                        <div class="history-item">
+                            <span>${formatDate(log)}</span>
+                            <button class="btn-del-history" onclick="deleteLog(${evt.id}, ${index})">刪除</button>
+                        </div>
+                    `;
+                });
+
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="card-header">
+                        <div class="event-title">${evt.name}</div>
+                        <button style="border:none;background:none;color:#999;" onclick="deleteEvent(${evt.id})">✕</button>
+                    </div>
+                    <div class="last-date">${lastLog ? '上次：' + formatDate(lastLog) : '新事件'}</div>
+                    <div class="time-elapsed">${displayTime}</div>
+                    
+                    <button class="btn btn-primary" onclick="logTime(${evt.id})">✔️ 剛剛做了</button>
+                    <button class="btn btn-outline" onclick="toggleHistory(${evt.id})">📋 歷史紀錄</button>
+                    
+                    <div id="history-${evt.id}" class="history-list">
+                        ${historyHtml || '<div style="text-align:center;padding:10px;">尚無紀錄</div>'}
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        // --- 頁面切換 ---
+        function switchPage(pageName) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            
+            if (pageName === 'home') {
+                document.getElementById('home-page').classList.add('active');
+                document.querySelector('.nav-item:nth-child(1)').classList.add('active');
+                document.getElementById('header-title').innerText = "我的時間紀錄";
+            } else if (pageName === 'settings') {
+                document.getElementById('settings-page').classList.add('active');
+                document.querySelector('.nav-item:nth-child(3)').classList.add('active');
+                document.getElementById('header-title').innerText = "設定";
+            }
+        }
+
+        function clearAllData() {
+            if(confirm("這將會刪除所有資料且無法復原！確定嗎？")) {
+                localStorage.removeItem('myTimeTracker_events');
+                events = [];
+                renderEvents();
+                alert("資料已清除");
+            }
+        }
+
+        // --- 啟動與自動更新 ---
+        
+        // 每分鐘更新一次介面上的時間顯示
+        setInterval(() => {
+            if(document.getElementById('home-page').classList.contains('active')) {
+                renderEvents();
+            }
+        }, 60000);
+
+        // 初始渲染
+        renderEvents();
+    </script>
+</body>
+</html>
