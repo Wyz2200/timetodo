@@ -3,259 +3,381 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>上次是什麼時候？</title>
+    <title>時間紀錄 App</title>
     <style>
-        /* 預設顏色變數 */
         :root {
-            --primary: #4F46E5; /* 預設藍色 */
-            --bg: #F3F4F6;
+            /* 預設顏色，將會被 JS 動態更新 */
+            --primary: #4F46E5;
+            --primary-dark: #4338ca;
+            --bg: #F9FAFB;
             --card-bg: #FFFFFF;
-            --text-main: #1F2937;
+            --text-main: #111827;
             --text-sub: #6B7280;
             --danger: #EF4444;
+            --border: #E5E7EB;
         }
-        
-        /* 初始化 */
+
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; }
 
-        /* Header */
-        header { background: var(--card-bg); padding: 15px; text-align: center; font-weight: bold; font-size: 1.2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); z-index: 10; display: flex; justify-content: space-between; align-items: center; }
-        .header-title { flex-grow: 1; text-align: center; }
-        .header-btn { background: none; border: none; font-size: 1.4rem; color: var(--text-sub); cursor: pointer; padding: 0 10px; }
-        .header-btn:active { opacity: 0.7; }
+        /* header */
+        header { background: var(--card-bg); padding: 15px; text-align: center; font-weight: 700; font-size: 1.1rem; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 20; display: flex; justify-content: space-between; align-items: center; }
+        .header-title-text { flex-grow: 1; text-align: center; }
+        .header-btn { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-main); padding: 0 5px; }
+
 
         /* Main Content Area */
-        main { flex: 1; overflow-y: auto; padding: 15px; padding-bottom: 80px; }
+        main { flex: 1; overflow-y: auto; padding: 15px; padding-bottom: 90px; }
 
         /* Pages */
         .page { display: none; }
         .page.active { display: block; }
 
-        /* Event Card (使用 --event-color 變數) */
-        .card { background: var(--card-bg); border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .event-title { font-size: 1.1rem; font-weight: 600; }
-        .time-elapsed { font-size: 1.5rem; font-weight: 800; color: var(--event-color); margin: 10px 0; }
-        .last-date { font-size: 0.85rem; color: var(--text-sub); }
+        /* --- Hero Card (置頂事件) --- */
+        .hero-section { margin-bottom: 25px; display: none; }
+        .hero-section.has-hero { display: block; }
+        .hero-label { font-size: 0.8rem; color: var(--text-sub); margin-bottom: 5px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+        
+        .hero-card {
+            /* Background將由 JS 內聯樣式控制 */
+            color: white;
+            border-radius: 16px;
+            padding: 25px 20px;
+            position: relative;
+            text-align: center;
+        }
+        .hero-card .event-title { font-size: 1.4rem; font-weight: 600; margin-bottom: 5px; opacity: 0.9; }
+        .hero-card .time-elapsed { font-size: 2.5rem; font-weight: 800; margin: 15px 0; color: white; line-height: 1.1; }
+        .hero-card .last-date { font-size: 0.9rem; opacity: 0.8; margin-bottom: 20px; }
+        .hero-card .btn-record { 
+            background: white; border: none; 
+            padding: 12px 30px; border-radius: 50px; font-weight: 700; 
+            font-size: 1rem; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.1s;
+        }
+        .hero-card .btn-record:active { transform: scale(0.95); }
+        .hero-card .menu-btn { color: white; opacity: 0.8; }
+        
+        /* 歷史紀錄按鈕/清單在 Hero Card 內部的樣式優化 */
+        .hero-card .btn-history-toggle { 
+             color: white !important; 
+             background: rgba(0,0,0,0.15); 
+             border: none;
+             padding: 6px 12px;
+             border-radius: 50px;
+             font-size: 0.8rem;
+        }
+        .hero-card .history-list {
+            background: rgba(255,255,255,0.15) !important;
+            border-top: none; 
+            padding-top: 5px;
+        }
+        .hero-card .history-item { color: white !important; border-bottom: 1px dashed rgba(255,255,255,0.3) !important; }
+        .hero-card .btn-del-history { color: white !important; background: rgba(0,0,0,0.2) !important; }
 
-        /* Buttons */
-        .btn { border: none; padding: 10px 15px; border-radius: 8px; font-size: 0.9rem; cursor: pointer; font-weight: 500; transition: opacity 0.2s; width: 100%; text-align: center; }
+
+        /* --- Standard Card (一般事件) --- */
+        .card { background: var(--card-bg); border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid var(--border); position: relative; }
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+        .event-info { flex: 1; }
+        .event-title { font-size: 1.1rem; font-weight: 600; color: var(--text-main); }
+        .time-elapsed { font-size: 1.4rem; font-weight: 700; margin: 5px 0; } /* 顏色將由 JS 內聯樣式控制 */
+        .last-date { font-size: 0.8rem; color: var(--text-sub); }
+
+        /* Buttons & Actions */
+        .action-row { display: flex; gap: 8px; margin-top: 15px; }
+        .btn { border: none; padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; cursor: pointer; font-weight: 500; transition: opacity 0.2s; flex: 1; text-align: center; }
         .btn:active { opacity: 0.7; }
-        .btn-primary { background-color: var(--event-color); color: white; margin-top: 10px; }
-        .btn-outline { background-color: transparent; border: 1px solid #D1D5DB; color: var(--text-sub); margin-top: 8px; }
-        .btn-danger { background-color: var(--danger); color: white; margin-top: 20px; }
+        .btn-primary { background-color: var(--primary); color: white; }
+        .btn-outline { background-color: transparent; border: 1px solid var(--border); color: var(--text-sub); }
+        .btn-danger { background-color: var(--danger); color: white; width: 100%; margin-top: 20px; padding: 12px; }
+
+        /* --- Dropdown Menu (三個點) --- */
+        .menu-container { position: relative; }
+        .menu-btn { background: none; border: none; font-size: 1.5rem; line-height: 1; cursor: pointer; padding: 0 5px; color: var(--text-sub); }
+        .dropdown { 
+            position: absolute; right: 0; top: 100%; background: white; 
+            border: 1px solid var(--border); border-radius: 8px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 140px; 
+            display: none; z-index: 50; overflow: hidden;
+        }
+        .dropdown.show { display: block; }
+        .dropdown-item { 
+            padding: 10px 15px; width: 100%; text-align: left; background: none; 
+            border: none; border-bottom: 1px solid #f3f4f6; font-size: 0.9rem; 
+            color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 8px;
+        }
+        .dropdown-item:last-child { border-bottom: none; }
+        .dropdown-item:active { background-color: #f3f4f6; }
+        .dropdown-item.danger { color: var(--danger); }
+
+        /* Color Picker in Dropdown */
+        .color-picker-container { padding: 10px 15px; border-bottom: 1px solid #f3f4f6; }
+        .color-selector { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+        .color-option { width: 20px; height: 20px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: border-color 0.1s; }
+        .color-option.selected { border-color: var(--text-main); }
+
 
         /* History Section */
-        .history-list { margin-top: 15px; border-top: 1px solid #E5E7EB; padding-top: 10px; display: none; }
+        .history-list { margin-top: 15px; border-top: 1px solid #f3f4f6; padding-top: 10px; display: none; }
         .history-list.show { display: block; }
-        /* 調整歷史紀錄文字顏色，提高對比 (Request 2) */
-        .history-item { display: flex; justify-content: space-between; font-size: 0.9rem; color: var(--text-main); padding: 5px 0; border-bottom: 1px dashed #eee; }
-        .btn-del-history { color: var(--danger); background: none; border: none; cursor: pointer; font-size: 0.8rem; padding: 0 5px; }
+        .history-item { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-sub); padding: 8px 0; border-bottom: 1px dashed #eee; }
+        /* 修正了按鈕顏色 */
+        .btn-del-history { color: var(--danger); background: #fee2e2; padding: 2px 8px; border-radius: 4px; border: none; font-size: 0.75rem; }
 
-        /* Modal (Add Event) */
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 100; }
+        /* Modal */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(2px); }
         .modal.show { display: flex; }
-        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 85%; max-width: 300px; }
-        input[type="text"], input[type="color"] { width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; margin: 10px 0; font-size: 1rem; }
-        input[type="color"] { height: 40px; padding: 0; }
+        .modal-content { background: white; padding: 25px; border-radius: 16px; width: 85%; max-width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        input[type="text"] { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin: 15px 0; font-size: 1rem; outline-color: var(--primary); }
+        input[type="color"] { border: none; width: 40px; height: 40px; padding: 0; margin-left: 10px; cursor: pointer; }
 
-        /* Navbar */
-        .navbar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-top: 1px solid #E5E7EB; display: flex; justify-content: space-around; align-items: center; padding: 10px 0; padding-bottom: max(10px, env(safe-area-inset-bottom)); box-shadow: 0 -2px 10px rgba(0,0,0,0.03); z-index: 50; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-sub); font-size: 0.75rem; border: none; background: none; cursor: pointer; flex: 1; }
+
+        /* --- Navbar (SVG Icons) --- */
+        .navbar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; padding: 8px 0; padding-bottom: max(10px, env(safe-area-inset-bottom)); z-index: 30; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #9CA3AF; font-size: 0.7rem; border: none; background: none; cursor: pointer; flex: 1; padding: 5px; }
         .nav-item.active { color: var(--primary); }
-        .nav-icon { font-size: 1.4rem; margin-bottom: 2px; }
+        .nav-item svg { width: 24px; height: 24px; margin-bottom: 4px; fill: currentColor; }
         
-        /* The Big Plus Button */
-        .nav-add-btn { background: var(--primary); color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; border: none; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4); transform: translateY(-15px); cursor: pointer; }
-        .nav-add-btn:active { transform: translateY(-13px); }
-
-
-        /* Calendar View Styles */
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; max-width: 400px; margin: 15px auto; }
-        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: 600; }
-        .weekday-label { text-align: center; font-size: 0.8rem; color: var(--text-sub); padding: 5px 0; }
-        .day-cell { text-align: center; padding: 8px 0; font-size: 0.9rem; background: var(--card-bg); border-radius: 4px; position: relative; }
-        .day-cell.other-month { color: #ccc; }
-        .day-cell.today { border: 2px solid var(--primary); }
-        .day-cell.logged { background-color: #D1D5DB; font-weight: bold; color: var(--text-main); }
-        .day-cell.logged::after { content: '•'; position: absolute; bottom: 1px; left: 0; right: 0; color: var(--primary); font-size: 1.5rem; line-height: 0; }
-        .day-cell.logged-with-color::after { content: '•'; position: absolute; bottom: 1px; left: 0; right: 0; color: var(--logged-dot-color); font-size: 1.5rem; line-height: 0; }
-
-        /* Edit/Color Block */
-        .edit-block { margin-top: 15px; padding-top: 10px; border-top: 1px solid #E5E7EB; }
-        .edit-block label { display: block; font-size: 0.9rem; margin-top: 10px; color: var(--text-sub); }
-        .edit-color-picker { display: flex; gap: 10px; align-items: center; }
-        .edit-color-picker input[type="color"] { width: 40px; height: 40px; padding: 3px; margin: 0; }
-        .edit-color-picker input[type="text"] { flex-grow: 1; margin: 0; }
-        .color-preview { width: 40px; height: 40px; border-radius: 6px; border: 1px solid #D1D5DB; }
-
-        /* Global Settings Color Picker */
-        .global-color-picker { display: flex; gap: 10px; align-items: center; }
-        .global-color-picker input[type="color"] { width: 40px; height: 40px; padding: 3px; margin: 0; }
+        .nav-add-btn { background: var(--primary); color: white; width: 56px; height: 56px; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: none; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.4); transform: translateY(-20px); cursor: pointer; }
+        .nav-add-btn svg { width: 30px; height: 30px; fill: white; }
+        
+        
+        /* --- Calendar Page Styles --- */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            text-align: center;
+        }
+        .calendar-header {
+            font-weight: 600;
+            color: var(--text-main);
+            padding: 8px 0;
+            font-size: 0.9rem;
+        }
+        .calendar-day {
+            padding: 8px 0;
+            border-radius: 8px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            font-size: 0.9rem;
+            min-height: 50px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            position: relative;
+        }
+        .calendar-day.today {
+            border: 2px solid var(--primary);
+            box-shadow: 0 0 5px rgba(79, 70, 229, 0.2);
+        }
+        .calendar-day-number {
+            font-weight: 700;
+            margin-bottom: 5px;
+            padding-top: 2px;
+        }
+        .calendar-event-count {
+            background-color: var(--primary);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-top: 2px;
+            line-height: 1;
+        }
+        .calendar-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 0 10px;
+        }
+        .calendar-nav-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
 
-    <header>
-        <div style="width: 28px;"></div> <div id="header-title" class="header-title">我的時間紀錄</div>
-        <button id="calendar-btn" class="header-btn" onclick="switchPage('calendar')">🗓️</button>
+    <header id="header-title">
+        <div class="header-title-text">時間紀錄</div>
+        <button class="header-btn" onclick="switchPage('calendar')" title="行事曆視圖">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        </button>
     </header>
 
-    <main>
+    <main onclick="closeAllDropdowns(event)">
         <div id="home-page" class="page active">
+            
+            <div id="hero-section" class="hero-section">
+                <div class="hero-label">當前置頂</div>
+                <div id="hero-container"></div>
+            </div>
+
+            <div class="hero-label" style="margin-top: 20px; margin-left: 5px;">所有項目</div>
             <div id="event-list"></div>
+            
             <div id="empty-state" style="text-align: center; color: #9CA3AF; margin-top: 50px; display: none;">
-                還沒有紀錄事項<br>點擊下方 **+** 新增一個吧！
+                <p>還沒有紀錄事項</p>
+                <p>點擊下方 <span style="font-weight:bold; color:var(--primary);">+</span> 開始追蹤</p>
             </div>
         </div>
 
         <div id="calendar-page" class="page">
-            <div class="calendar-header">
-                <button class="header-btn" onclick="changeMonth(-1)">◀️</button>
-                <span id="current-month-year">2025年 12月</span>
-                <button class="header-btn" onclick="changeMonth(1)">▶️</button>
+            <div class="calendar-nav">
+                <button class="calendar-nav-btn" onclick="changeCalendarMonth(-1)">&#9664; 上個月</button>
+                <h3 id="current-month-display"></h3>
+                <button class="calendar-nav-btn" onclick="changeCalendarMonth(1)">下個月 &#9654;</button>
             </div>
-            <div class="calendar-grid">
-                <div class="weekday-label">日</div>
-                <div class="weekday-label">一</div>
-                <div class="weekday-label">二</div>
-                <div class="weekday-label">三</div>
-                <div class="weekday-label">四</div>
-                <div class="weekday-label">五</div>
-                <div class="weekday-label">六</div>
+            <div class="calendar-grid-container">
+                <div class="calendar-grid" id="calendar-grid">
+                    <div class="calendar-header">日</div>
+                    <div class="calendar-header">一</div>
+                    <div class="calendar-header">二</div>
+                    <div class="calendar-header">三</div>
+                    <div class="calendar-header">四</div>
+                    <div class="calendar-header">五</div>
+                    <div class="calendar-header">六</div>
+                    </div>
             </div>
-            <div id="calendar-days" class="calendar-grid">
-                </div>
-            
-            <p style="text-align: center; color: var(--text-sub); font-size: 0.85rem; margin-top: 20px;">
-                點擊有圓點的日子，查看當日紀錄。
-            </p>
-
-            <div id="daily-logs-display" style="margin-top: 20px;">
-                </div>
+            <div style="margin-top: 20px; color: var(--text-sub); font-size: 0.9rem; text-align: center;">點擊日期查看詳細資訊 (未實作)</div>
         </div>
 
         <div id="settings-page" class="page">
             <div class="card">
-                <div class="event-title">🎨 程式色調設定 (預設藍色)</div>
-                <p style="color: var(--text-sub); font-size: 0.9rem;">這會更改整個 App 的主題色（主頁、導航欄、預設事件色）。</p>
-                <label for="global-color">選擇主題色：</label>
-                <div class="global-color-picker">
-                    <input type="color" id="global-color" oninput="updateGlobalColor(this.value)">
-                    <input type="text" id="global-color-hex" oninput="updateGlobalColor(this.value)">
+                <div class="event-title">🎨 應用程式主色調</div>
+                <p style="color: var(--text-sub); font-size: 0.9rem; line-height: 1.5;">
+                    調整所有介面的主要顏色。
+                </p>
+                <div style="display: flex; align-items: center; margin-top: 15px;">
+                    <input type="color" id="app-color-picker" value="#4F46E5" onchange="updateAppColor(this.value)">
+                    <span style="font-weight: 600;" id="app-color-display">#4F46E5</span>
                 </div>
             </div>
-            
-            <div class="card">
+
+            <div class="card" style="margin-top: 20px;">
                 <div class="event-title">資料管理</div>
-                <p style="color: var(--text-sub); font-size: 0.9rem;">所有資料都儲存在您的瀏覽器中。</p>
+                <p style="color: var(--text-sub); font-size: 0.9rem; line-height: 1.5;">
+                    你的資料目前僅儲存在這台裝置的瀏覽器中。
+                </p>
                 <button class="btn btn-danger" onclick="clearAllData()">⚠️ 清除所有資料</button>
-            </div>
-            <div class="card">
-                <div class="event-title">關於</div>
-                <p style="color: var(--text-sub); font-size: 0.9rem;">這是一個簡易的時間追蹤工具。</p>
             </div>
         </div>
     </main>
 
-    <div id="add-modal" class="modal" onclick="if(event.target.id === 'add-modal') closeModal()">
-        <div class="modal-content" onclick="event.stopPropagation()">
+    <div id="add-modal" class="modal">
+        <div class="modal-content">
             <div class="event-title">新增追蹤事項</div>
-            <input type="text" id="new-event-name" placeholder="例如：換床單、澆水...">
-            <label for="new-event-color" style="font-size: 0.9rem;">事件顏色：</label>
-            <div class="edit-color-picker">
-                <input type="color" id="new-event-color" value="#4F46E5">
-                <input type="text" id="new-event-color-hex" value="#4F46E5" oninput="document.getElementById('new-event-color').value=this.value">
-            </div>
-            <div style="display: flex; gap: 10px; margin-top: 20px;">
+            <input type="text" id="new-event-name" placeholder="輸入事項名稱...">
+            <div style="display: flex; gap: 10px;">
                 <button class="btn btn-outline" onclick="closeModal()">取消</button>
-                <button class="btn btn-primary" style="--event-color: var(--primary);" onclick="saveNewEvent()">確認新增</button>
+                <button class="btn btn-primary" onclick="saveNewEvent()">確認新增</button>
             </div>
         </div>
     </div>
 
+    <div id="color-modal" class="modal">
+        <div class="modal-content">
+            <div class="event-title">選擇事項顏色</div>
+            <div id="event-color-selector" class="color-selector" style="margin: 15px 0;">
+                </div>
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-outline" onclick="closeColorModal()">取消</button>
+                <button class="btn btn-primary" onclick="applyEventColor()">確認</button>
+            </div>
+        </div>
+    </div>
+
+
     <nav class="navbar">
         <button class="nav-item active" onclick="switchPage('home')">
-            <span class="nav-icon">🏠</span>
+            <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
             <span>主頁</span>
         </button>
-        <button class="nav-add-btn" style="background: var(--primary);" onclick="openModal()">
-            +
+        <button class="nav-add-btn" onclick="openModal()">
+            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
         </button>
         <button class="nav-item" onclick="switchPage('settings')">
-            <span class="nav-icon">⚙️</span>
+            <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.04.17 0 .34.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.04-.22 0-.45-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
             <span>設定</span>
         </button>
     </nav>
 
     <script>
-        // --- 全域變數與初始化 ---
-        const LOCAL_STORAGE_KEY = 'myTimeTracker_events_v2';
-        const GLOBAL_COLOR_KEY = 'myTimeTracker_global_color';
-        let events = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || [];
-        let currentDate = new Date(); // for Calendar View
+        // --- Data & Initialization ---
+        // Events: { id, name, logs: [], isPinned: false, color: null }
+        let events = JSON.parse(localStorage.getItem('myTimeTracker_events')) || [];
+        let appPrimaryColor = localStorage.getItem('myTimeTracker_appColor') || '#4F46E5';
+        
+        // 預設可選顏色
+        const defaultColors = ['#4F46E5', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#8B5CF6', '#EC4899'];
+        let editingEventId = null;
+        let currentCalendarDate = new Date();
 
-        // 初始化全域顏色
-        const storedColor = localStorage.getItem(GLOBAL_COLOR_KEY) || '#4F46E5';
-        document.documentElement.style.setProperty('--primary', storedColor);
+        // --- Color Utils ---
+        function hexToRgb(hex) {
+            const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+            hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)] : null;
+        }
 
-        // 確保每個事件都有顏色屬性 (Request 1)
-        events = events.map(e => ({
-            ...e,
-            color: e.color || storedColor,
-            logs: e.logs || []
-        }));
+        function rgbToHex(r, g, b) {
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase();
+        }
 
+        function darkenColor(hex, percent) {
+            const [r, g, b] = hexToRgb(hex);
+            const t = 1 - percent;
+            const newR = Math.min(255, Math.floor(r * t));
+            const newG = Math.min(255, Math.floor(g * t));
+            const newB = Math.min(255, Math.floor(b * t));
+            return rgbToHex(newR, newG, newB);
+        }
+
+        function applyGlobalStyles() {
+            const root = document.documentElement;
+            root.style.setProperty('--primary', appPrimaryColor);
+            root.style.setProperty('--primary-dark', darkenColor(appPrimaryColor, 0.2));
+            
+            // 更新設定頁面的顏色顯示
+            const picker = document.getElementById('app-color-picker');
+            const display = document.getElementById('app-color-display');
+            if (picker) picker.value = appPrimaryColor;
+            if (display) display.textContent = appPrimaryColor;
+            
+            // 更新導航欄添加按鈕的陰影顏色
+            const navAddBtn = document.querySelector('.nav-add-btn');
+            if (navAddBtn) {
+                const [r, g, b] = hexToRgb(appPrimaryColor);
+                navAddBtn.style.boxShadow = `0 4px 15px rgba(${r}, ${g}, ${b}, 0.4)`;
+            }
+        }
+
+        function updateAppColor(newColor) {
+            appPrimaryColor = newColor.toUpperCase();
+            localStorage.setItem('myTimeTracker_appColor', appPrimaryColor);
+            applyGlobalStyles();
+        }
+
+        // --- Data & Storage ---
 
         function saveToLocal() {
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(events));
+            localStorage.setItem('myTimeTracker_events', JSON.stringify(events));
             renderEvents();
         }
 
-        // --- 顏色設定邏輯 (Request 1) ---
-
-        function updateGlobalColor(color) {
-            // 簡化顏色輸入，如果使用者從文字輸入框輸入
-            if (color.length === 6 && !color.startsWith('#')) {
-                color = '#' + color;
-            }
-            if (color.match(/^#([0-9A-F]{3}){1,2}$/i)) {
-                document.documentElement.style.setProperty('--primary', color);
-                document.querySelector('.nav-add-btn').style.background = color;
-                document.getElementById('global-color').value = color;
-                document.getElementById('global-color-hex').value = color;
-                localStorage.setItem(GLOBAL_COLOR_KEY, color);
-
-                // 更新新增事件 modal 預設顏色
-                document.getElementById('new-event-color').value = color;
-                document.getElementById('new-event-color-hex').value = color;
-                document.querySelector('#add-modal .btn-primary').style.setProperty('--event-color', color);
-            }
-        }
-        
-        function updateEventColor(id, newColor) {
-            const event = events.find(e => e.id === id);
-            if (event && newColor.match(/^#([0-9A-F]{3}){1,2}$/i)) {
-                event.color = newColor;
-                saveToLocal();
-            }
-        }
-
-        function updateEventName(id, newName) {
-            const event = events.find(e => e.id === id);
-            if (event && newName.trim()) {
-                event.name = newName.trim();
-                saveToLocal();
-            }
-        }
-
-
-        // --- 時間格式化邏輯 (Request 5) ---
-        const WEEKDAYS = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
-
+        // --- Time Utils ---
         function formatDuration(ms) {
-            if (ms === null) return "尚未執行";
+            if (!ms) return "尚未執行";
             const seconds = Math.floor(ms / 1000);
             const minutes = Math.floor(seconds / 60);
             const hours = Math.floor(minutes / 60);
@@ -267,23 +389,17 @@
             return "剛剛";
         }
 
-        function formatLogDate(timestamp) {
+        function formatDate(timestamp) {
             const date = new Date(timestamp);
-            const dayOfWeek = WEEKDAYS[date.getDay()]; // Request 5
-            return `${date.toLocaleString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false })} (${dayOfWeek})`;
+            const options = { hour12: false, month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+            const dateStr = date.toLocaleString('zh-TW', options);
+            const dayOfWeek = ['日', '一', '二', '三', '四', '五', '六'][date.getDay()];
+            return `${dateStr} (週${dayOfWeek})`;
         }
+        
+        // --- Core Logic ---
 
-
-        // --- 核心功能 ---
-
-        // 1. Modal 操控
         function openModal() {
-            // 確保 modal 預設顏色是最新的 global color
-            const globalColor = localStorage.getItem(GLOBAL_COLOR_KEY) || '#4F46E5';
-            document.getElementById('new-event-color').value = globalColor;
-            document.getElementById('new-event-color-hex').value = globalColor;
-            document.querySelector('#add-modal .btn-primary').style.setProperty('--event-color', globalColor);
-
             document.getElementById('add-modal').classList.add('show');
             document.getElementById('new-event-name').focus();
         }
@@ -295,296 +411,393 @@
 
         function saveNewEvent() {
             const name = document.getElementById('new-event-name').value.trim();
-            const color = document.getElementById('new-event-color').value;
-
-            if (!name) return alert('請輸入名稱');
+            if (!name) return;
             
             const newEvent = {
                 id: Date.now(),
                 name: name,
-                color: color, // Request 1
-                logs: [] 
+                logs: [],
+                isPinned: false,
+                color: null // 新增顏色屬性，預設為 null
             };
             
+            // 如果這是第一個事件，自動置頂
+            if (events.length === 0) newEvent.isPinned = true;
+
             events.push(newEvent);
             saveToLocal();
             closeModal();
             switchPage('home');
         }
 
-        // 2. 紀錄時間 (打卡) (Request 4: 防重複紀錄)
         function logTime(id) {
             const event = events.find(e => e.id === id);
-            if (!event) return;
-
-            const now = Date.now();
-            const lastLog = event.logs.length > 0 ? event.logs[0] : 0;
-            const diff = now - lastLog;
-            
-            // 檢查是否在 5 秒內重複點擊 (Request 4)
-            if (diff > 0 && diff < 5000) { 
-                alert(`太快了！這個事件剛剛已在 ${formatLogDate(lastLog)} 紀錄。`);
-                return;
+            if (event) {
+                const currentTime = Date.now();
+                const lastLog = event.logs.length > 0 ? event.logs[0] : 0;
+                
+                // 檢查是否與最近一次紀錄時間在 5 秒內
+                if (currentTime - lastLog < 5000) {
+                    alert('重複點擊！請勿在 5 秒內重複紀錄。');
+                    return;
+                }
+                
+                event.logs.unshift(currentTime);
+                saveToLocal();
             }
-
-            event.logs.unshift(now); // 加到最前面
-            saveToLocal();
         }
 
-        // 3. 刪除特定歷史紀錄
         function deleteLog(eventId, logIndex) {
-            if(confirm('確定刪除這條紀錄嗎？')) {
+            // 使用 event.stopPropagation() 防止冒泡到父層的 closeAllDropdowns
+            event.stopPropagation(); 
+            if(confirm('刪除這條紀錄？')) {
                 const event = events.find(e => e.id === eventId);
                 event.logs.splice(logIndex, 1);
                 saveToLocal();
             }
         }
 
-        // 4. 刪除整個事件
+        // 深度設定功能
+        function togglePin(id) {
+            closeAllDropdowns();
+            const targetEvent = events.find(e => e.id === id);
+            
+            if (targetEvent.isPinned) {
+                // 如果已經是置頂，取消置頂
+                targetEvent.isPinned = false;
+            } else {
+                // 如果要置頂新的，先取消其他所有的置頂 (保持只有一個 Main Visual)
+                events.forEach(e => e.isPinned = false);
+                targetEvent.isPinned = true;
+            }
+            saveToLocal();
+        }
+
         function deleteEvent(id) {
-            if(confirm('確定刪除這個事件與所有紀錄嗎？')) {
+            closeAllDropdowns();
+            if(confirm('確定刪除此事件與所有紀錄？')) {
                 events = events.filter(e => e.id !== id);
                 saveToLocal();
             }
         }
 
-        // 5. 切換歷史顯示
+        // Event Color Picker Functions
+        function openColorModal(id) {
+            closeAllDropdowns();
+            editingEventId = id;
+            document.getElementById('color-modal').classList.add('show');
+            renderColorOptions(id);
+        }
+
+        function closeColorModal() {
+            document.getElementById('color-modal').classList.remove('show');
+            editingEventId = null;
+        }
+        
+        function renderColorOptions(eventId) {
+            const selector = document.getElementById('event-color-selector');
+            selector.innerHTML = '';
+            const event = events.find(e => e.id === eventId);
+            const currentColor = event.color || appPrimaryColor;
+            
+            // Add 'Default (App Color)' option
+            const defaultOption = document.createElement('div');
+            defaultOption.className = `color-option ${!event.color ? 'selected' : ''}`;
+            defaultOption.style.backgroundColor = appPrimaryColor;
+            defaultOption.title = '預設顏色';
+            defaultOption.onclick = () => selectColor(null);
+            selector.appendChild(defaultOption);
+            
+            // Add custom color options
+            defaultColors.forEach(color => {
+                const option = document.createElement('div');
+                option.className = `color-option ${color === currentColor ? 'selected' : ''}`;
+                option.style.backgroundColor = color;
+                option.title = color;
+                option.onclick = () => selectColor(color);
+                selector.appendChild(option);
+            });
+            
+            selector.dataset.selectedColor = currentColor; // Store current selection
+        }
+
+        function selectColor(color) {
+            const selector = document.getElementById('event-color-selector');
+            selector.dataset.selectedColor = color;
+            
+            document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
+            
+            // Find and select the chosen color option
+            document.querySelectorAll('.color-option').forEach(opt => {
+                const optColor = opt.title === '預設顏色' ? null : opt.title;
+                if (optColor === color) {
+                    opt.classList.add('selected');
+                } else if (color === null && opt.title === '預設顏色') {
+                    opt.classList.add('selected');
+                }
+            });
+        }
+        
+        function applyEventColor() {
+            const event = events.find(e => e.id === editingEventId);
+            const selector = document.getElementById('event-color-selector');
+            const selectedColor = selector.dataset.selectedColor;
+            
+            if (event) {
+                // If selectedColor is null (Default), set event.color to null to use app color
+                event.color = selectedColor === 'null' ? null : selectedColor; 
+                saveToLocal();
+                closeColorModal();
+            }
+        }
+
+        // UI Helpers
         function toggleHistory(id) {
             const el = document.getElementById(`history-${id}`);
             el.classList.toggle('show');
         }
 
-        // --- 渲染畫面 (UI) ---
+        function toggleDropdown(event, id) {
+            event.stopPropagation(); // 防止觸發 body 的關閉事件
+            // 先關閉其他所有
+            closeAllDropdowns();
+            const dropdown = document.getElementById(`dropdown-${id}`);
+            if (dropdown) dropdown.classList.toggle('show');
+        }
+
+        function closeAllDropdowns(e) {
+            document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('show'));
+        }
+
+        // --- Rendering ---
         function renderEvents() {
-            const list = document.getElementById('event-list');
+            const listContainer = document.getElementById('event-list');
+            const heroContainer = document.getElementById('hero-container');
+            const heroSection = document.getElementById('hero-section');
             const emptyState = document.getElementById('empty-state');
             
-            list.innerHTML = '';
+            listContainer.innerHTML = '';
+            heroContainer.innerHTML = '';
             
             if (events.length === 0) {
                 emptyState.style.display = 'block';
+                heroSection.classList.remove('has-hero');
+                return;
+            }
+            emptyState.style.display = 'none';
+
+            // 分離置頂與普通事件
+            const pinnedEvent = events.find(e => e.isPinned);
+            const otherEvents = events.filter(e => !e.isPinned);
+
+            // 1. 渲染置頂事件 (Hero)
+            if (pinnedEvent) {
+                heroSection.classList.add('has-hero');
+                heroContainer.innerHTML = createCardHtml(pinnedEvent, true);
             } else {
-                emptyState.style.display = 'none';
+                heroSection.classList.remove('has-hero');
             }
 
-            events.forEach(evt => {
-                const lastLog = evt.logs.length > 0 ? evt.logs[0] : null;
-                const timeDiff = lastLog ? Date.now() - lastLog : null;
-                const displayTime = formatDuration(timeDiff);
-                
-                // 歷史紀錄 HTML
-                let historyHtml = '';
-                evt.logs.forEach((log, index) => {
-                    historyHtml += `
-                        <div class="history-item">
-                            <span>${formatLogDate(log)}</span>
-                            <button class="btn-del-history" onclick="deleteLog(${evt.id}, ${index})">刪除</button>
-                        </div>
-                    `;
-                });
-
-                const card = document.createElement('div');
-                card.className = 'card';
-                // 使用事件獨立顏色 (Request 1)
-                card.style.setProperty('--event-color', evt.color); 
-                card.innerHTML = `
-                    <div class="card-header">
-                        <input type="text" id="name-${evt.id}" value="${evt.name}" class="event-title" 
-                            onchange="updateEventName(${evt.id}, this.value)" 
-                            style="border: none; padding: 0; margin: 0; font-size: 1.1rem; font-weight: 600; background: none; flex-grow: 1;">
-                        <button style="border:none;background:none;color:#999;" onclick="deleteEvent(${evt.id})">✕</button>
-                    </div>
-                    <div class="last-date">${lastLog ? '上次：' + formatLogDate(lastLog).split(' (')[0] : '新事件'}</div>
-                    <div class="time-elapsed">${displayTime}</div>
-                    
-                    <button class="btn btn-primary" onclick="logTime(${evt.id})">✔️ 剛剛做了</button>
-                    <button class="btn btn-outline" onclick="toggleHistory(${evt.id})">📋 歷史紀錄 & 設定</button>
-                    
-                    <div id="history-${evt.id}" class="history-list">
-                        <div class="edit-block">
-                            <label>更改事件名稱：</label>
-                            <input type="text" value="${evt.name}" onchange="updateEventName(${evt.id}, this.value)">
-
-                            <label for="color-${evt.id}">更改事件顏色：</label>
-                            <div class="edit-color-picker">
-                                <input type="color" id="color-${evt.id}" value="${evt.color}" 
-                                    oninput="updateEventColor(${evt.id}, this.value)">
-                                <input type="text" value="${evt.color}" onchange="updateEventColor(${evt.id}, this.value)" style="flex-grow: 1;">
-                            </div>
-                        </div>
-
-                        <div class="edit-block">
-                            <p style="font-weight: 600; color: var(--text-main);">所有執行紀錄:</p>
-                            ${historyHtml || '<div style="text-align:center;padding:10px;color:var(--text-sub);">尚無紀錄</div>'}
-                        </div>
-                    </div>
-                `;
-                list.appendChild(card);
+            // 2. 渲染其他事件
+            otherEvents.forEach(evt => {
+                const cardDiv = document.createElement('div');
+                cardDiv.className = 'card';
+                cardDiv.innerHTML = createCardHtml(evt, false);
+                listContainer.appendChild(cardDiv);
             });
         }
 
-        // --- 頁面切換 ---
+        function createCardHtml(evt, isHero) {
+            const primaryColor = evt.color || appPrimaryColor;
+            const primaryDark = darkenColor(primaryColor, 0.2);
+            const lastLog = evt.logs.length > 0 ? evt.logs[0] : null;
+            const timeDiff = lastLog ? Date.now() - lastLog : null;
+            const displayTime = lastLog ? formatDuration(timeDiff) : "開始第一次";
+            const lastDateStr = lastLog ? formatDate(lastLog) : "尚無紀錄";
+
+            // 歷史紀錄 HTML
+            let historyHtml = '';
+            evt.logs.forEach((log, index) => {
+                historyHtml += `
+                    <div class="history-item">
+                        <span>${formatDate(log)}</span>
+                        <button class="btn-del-history" onclick="deleteLog(${evt.id}, ${index})">✕</button>
+                    </div>
+                `;
+            });
+
+            // 選單 (三點) HTML
+            const menuHtml = `
+                <div class="menu-container">
+                    <button class="menu-btn" onclick="toggleDropdown(event, ${evt.id})" style="color:${isHero ? 'white' : 'var(--text-sub)'};">⋮</button>
+                    <div id="dropdown-${evt.id}" class="dropdown">
+                        <button class="dropdown-item" onclick="openColorModal(${evt.id})">
+                             🎨 更改顏色
+                        </button>
+                        <button class="dropdown-item" onclick="togglePin(${evt.id})">
+                            ${evt.isPinned ? '❌ 取消置頂' : '📌 設為置頂'}
+                        </button>
+                        <button class="dropdown-item danger" onclick="deleteEvent(${evt.id})">
+                            🗑️ 刪除事件
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            if (isHero) {
+                // 回傳 Hero Card 的 HTML 結構
+                return `
+                    <div class="hero-card" style="background: linear-gradient(135deg, ${primaryColor}, ${primaryDark}); box-shadow: 0 10px 25px -5px ${primaryColor}4D;">
+                        <div style="position:absolute; right:10px; top:10px;">${menuHtml}</div>
+                        <div class="event-title">${evt.name}</div>
+                        <div class="time-elapsed">${displayTime}</div>
+                        <div class="last-date">上次：${lastDateStr}</div>
+                        <button class="btn-record" onclick="logTime(${evt.id})" style="color: ${primaryColor};">✔️ 立即紀錄</button>
+                        
+                        <div style="margin-top:20px; text-align:right;">
+                             <button class="btn btn-history-toggle" onclick="toggleHistory(${evt.id})">查看歷史紀錄 ▼</button>
+                        </div>
+                        <div id="history-${evt.id}" class="history-list" style="text-align:left;">
+                            ${historyHtml || '<div style="opacity:0.6;text-align:center;color:white!important;">無紀錄</div>'}
+                        </div>
+                    </div>
+                `;
+            } else {
+                // 回傳 普通 Card 的 HTML 結構
+                return `
+                    <div class="card-header">
+                        <div class="event-info">
+                            <div class="event-title">${evt.name}</div>
+                            <div class="time-elapsed" style="color: ${primaryColor};">${displayTime}</div>
+                            <div class="last-date">上次：${lastDateStr}</div>
+                        </div>
+                        ${menuHtml}
+                    </div>
+                    
+                    <div class="action-row">
+                        <button class="btn btn-primary" onclick="logTime(${evt.id})" style="background-color: ${primaryColor};">✔️ 紀錄</button>
+                        <button class="btn btn-outline" onclick="toggleHistory(${evt.id})">歷史</button>
+                    </div>
+                    
+                    <div id="history-${evt.id}" class="history-list">
+                        ${historyHtml || '<div style="text-align:center;padding:10px;">尚無紀錄</div>'}
+                    </div>
+                `;
+            }
+        }
+        
+        // --- Calendar Logic ---
+
+        function renderCalendar() {
+            const year = currentCalendarDate.getFullYear();
+            const month = currentCalendarDate.getMonth();
+            
+            document.getElementById('current-month-display').textContent = `${year}年 ${month + 1}月`;
+            
+            const calendarGrid = document.getElementById('calendar-grid');
+            // 清除舊的日期 (保留星期標頭)
+            while (calendarGrid.children.length > 7) {
+                calendarGrid.removeChild(calendarGrid.lastChild);
+            }
+            
+            const firstDayOfMonth = new Date(year, month, 1).getDay(); // 0 (Sun) - 6 (Sat)
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const today = new Date();
+            const todayKey = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+
+            // 計算事件日誌計數
+            const logCounts = events.flatMap(event => 
+                event.logs.map(log => {
+                    const logDate = new Date(log);
+                    return {
+                        dateKey: `${logDate.getFullYear()}-${logDate.getMonth()}-${logDate.getDate()}`,
+                        eventName: event.name,
+                        eventColor: event.color || appPrimaryColor
+                    };
+                })
+            ).reduce((acc, log) => {
+                if (!acc[log.dateKey]) {
+                    acc[log.dateKey] = new Set();
+                }
+                acc[log.dateKey].add(log.eventName);
+                return acc;
+            }, {});
+
+            // 填充空白
+            for (let i = 0; i < firstDayOfMonth; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'calendar-day';
+                emptyDay.innerHTML = '&nbsp;';
+                calendarGrid.appendChild(emptyDay);
+            }
+
+            // 填充日期
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateKey = `${year}-${month}-${day}`;
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'calendar-day';
+                if (dateKey === todayKey) dayDiv.classList.add('today');
+                
+                dayDiv.innerHTML = `<div class="calendar-day-number">${day}</div>`;
+                
+                // 顯示事件數量
+                if (logCounts[dateKey]) {
+                    const count = logCounts[dateKey].size;
+                    const countSpan = document.createElement('div');
+                    countSpan.className = 'calendar-event-count';
+                    countSpan.textContent = `${count} 事項`;
+                    dayDiv.appendChild(countSpan);
+                }
+                
+                calendarGrid.appendChild(dayDiv);
+            }
+        }
+        
+        function changeCalendarMonth(offset) {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + offset);
+            renderCalendar();
+        }
+
+
+        // --- Page Switching ---
         function switchPage(pageName) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             
-            // 隱藏日曆按鈕 (只在主頁顯示)
-            document.getElementById('calendar-btn').style.display = pageName === 'home' ? 'block' : 'none';
-
             if (pageName === 'home') {
                 document.getElementById('home-page').classList.add('active');
                 document.querySelector('.nav-item:nth-child(1)').classList.add('active');
-                document.getElementById('header-title').innerText = "我的時間紀錄";
+            } else if (pageName === 'calendar') {
+                document.getElementById('calendar-page').classList.add('active');
+                renderCalendar(); // 進入日曆頁面時渲染
             } else if (pageName === 'settings') {
-                // 載入設定頁時，更新顏色選取器狀態
-                const currentColor = localStorage.getItem(GLOBAL_COLOR_KEY) || '#4F46E5';
-                updateGlobalColor(currentColor);
-                
                 document.getElementById('settings-page').classList.add('active');
                 document.querySelector('.nav-item:nth-child(3)').classList.add('active');
-                document.getElementById('header-title').innerText = "設定";
-            } else if (pageName === 'calendar') { // Request 3
-                document.getElementById('calendar-page').classList.add('active');
-                document.getElementById('header-title').innerText = "行事曆檢視";
-                renderCalendar();
             }
         }
 
-        // --- 設定頁功能 ---
         function clearAllData() {
-            if(confirm("這將會刪除所有資料且無法復原！確定嗎？")) {
-                localStorage.removeItem(LOCAL_STORAGE_KEY);
+            if(confirm("警告：這將會永久刪除所有資料！")) {
+                localStorage.removeItem('myTimeTracker_events');
+                localStorage.removeItem('myTimeTracker_appColor');
                 events = [];
+                appPrimaryColor = '#4F46E5';
+                applyGlobalStyles();
                 renderEvents();
                 switchPage('home');
-                alert("資料已清除");
             }
         }
 
-        // --- 行事曆功能 (Request 3) ---
-
-        function getMonthData(year, month) {
-            const firstDay = new Date(year, month, 1);
-            const lastDay = new Date(year, month + 1, 0);
-            const numDays = lastDay.getDate();
-            const startDayOfWeek = firstDay.getDay(); // 0 (Sun) to 6 (Sat)
-            const today = new Date();
-
-            // 提取當月所有有紀錄的日期和顏色
-            const loggedDates = {}; 
-            events.forEach(event => {
-                event.logs.forEach(timestamp => {
-                    const logDate = new Date(timestamp);
-                    if (logDate.getFullYear() === year && logDate.getMonth() === month) {
-                        const day = logDate.getDate();
-                        if (!loggedDates[day]) {
-                            loggedDates[day] = [];
-                        }
-                        loggedDates[day].push({ name: event.name, color: event.color, time: timestamp });
-                    }
-                });
-            });
-
-            return { numDays, startDayOfWeek, today, loggedDates };
-        }
-
-        function renderCalendar() {
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth();
-            const todayDate = new Date().toDateString();
-
-            const { numDays, startDayOfWeek, loggedDates } = getMonthData(year, month);
-            const calendarDaysEl = document.getElementById('calendar-days');
-            const monthYearEl = document.getElementById('current-month-year');
-            
-            monthYearEl.textContent = `${year}年 ${month + 1}月`;
-            calendarDaysEl.innerHTML = '';
-            document.getElementById('daily-logs-display').innerHTML = ''; // 清空每日紀錄顯示
-
-            // 填充前一個月的空白
-            for (let i = 0; i < startDayOfWeek; i++) {
-                const cell = document.createElement('div');
-                cell.className = 'day-cell other-month';
-                cell.textContent = ''; // 可以顯示上個月的日期，但為求簡潔先留空
-                calendarDaysEl.appendChild(cell);
-            }
-
-            // 填充當月的日期
-            for (let day = 1; day <= numDays; day++) {
-                const dayDate = new Date(year, month, day);
-                const cell = document.createElement('div');
-                cell.className = 'day-cell';
-                cell.textContent = day;
-
-                // 標記今天
-                if (dayDate.toDateString() === todayDate) {
-                    cell.classList.add('today');
-                }
-
-                if (loggedDates[day]) {
-                    cell.classList.add('logged');
-                    cell.style.setProperty('--logged-dot-color', loggedDates[day][0].color); // 使用第一個事件的顏色作為圓點顏色
-                    cell.onclick = () => showDailyLogs(year, month, day, loggedDates[day]);
-                }
-                
-                calendarDaysEl.appendChild(cell);
-            }
-        }
-
-        function changeMonth(step) {
-            currentDate.setMonth(currentDate.getMonth() + step);
-            renderCalendar();
-        }
-
-        function showDailyLogs(year, month, day, logs) {
-            const displayEl = document.getElementById('daily-logs-display');
-            logs.sort((a, b) => b.time - a.time); // 倒序排列
-
-            let html = `
-                <div class="card" style="margin-top: 0;">
-                    <h3 style="margin-top: 0; border-bottom: 2px solid var(--primary); padding-bottom: 5px;">${year}年${month + 1}月${day}日 紀錄總覽</h3>
-            `;
-            
-            // 整理 logs 內容，僅保留獨特的事件名稱
-            const uniqueLogs = {};
-            logs.forEach(log => {
-                if (!uniqueLogs[log.name]) {
-                    uniqueLogs[log.name] = { logs: [], color: log.color };
-                }
-                uniqueLogs[log.name].logs.push(log.time);
-            });
-
-            for (const name in uniqueLogs) {
-                const data = uniqueLogs[name];
-                html += `
-                    <div style="border-left: 5px solid ${data.color}; padding-left: 10px; margin-bottom: 15px;">
-                        <h4 style="margin: 0 0 5px 0; color: ${data.color};">${name}</h4>
-                        ${data.logs.map(time => `<div style="font-size: 0.9rem; color: var(--text-main);">${formatLogDate(time).split(' (')[0]}</div>`).join('')}
-                    </div>
-                `;
-            }
-
-            html += `</div>`;
-            displayEl.innerHTML = html;
-        }
-
-
-        // --- 啟動與自動更新 ---
-        
-        // 每分鐘更新一次介面上的時間顯示
+        // Auto Refresh Timer
         setInterval(() => {
             if(document.getElementById('home-page').classList.contains('active')) {
                 renderEvents();
             }
         }, 60000);
 
-        // 初始載入時設定全局顏色
-        document.addEventListener('DOMContentLoaded', () => {
-            const initialColor = localStorage.getItem(GLOBAL_COLOR_KEY) || '#4F46E5';
-            updateGlobalColor(initialColor);
-            renderEvents();
-            switchPage('home'); // 確保在 home 頁面，日曆按鈕會顯示
-        });
+        // Initial Setup and Render
+        applyGlobalStyles();
+        renderEvents();
     </script>
 </body>
 </html>
