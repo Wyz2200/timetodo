@@ -3,87 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>上次是什麼時候？</title>
+    <title>時間紀錄 App</title>
     <style>
         :root {
             --primary: #4F46E5;
-            --bg: #F3F4F6;
+            --primary-light: #EEF2FF;
+            --bg: #F9FAFB;
             --card-bg: #FFFFFF;
-            --text-main: #1F2937;
+            --text-main: #111827;
             --text-sub: #6B7280;
             --danger: #EF4444;
+            --border: #E5E7EB;
         }
 
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
         body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; }
 
-        /* header */
-        header { background: var(--card-bg); padding: 15px; text-align: center; font-weight: bold; font-size: 1.2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); z-index: 10; }
+        /* Icons */
+        .icon { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .icon-sm { width: 18px; height: 18px; }
 
-        /* Main Content Area */
-        main { flex: 1; overflow-y: auto; padding: 15px; padding-bottom: 80px; }
+        /* Header */
+        header { background: var(--card-bg); padding: 15px; text-align: center; font-weight: 700; font-size: 1.1rem; border-bottom: 1px solid var(--border); z-index: 10; display: flex; align-items: center; justify-content: center; height: 60px; }
 
-        /* Pages */
-        .page { display: none; }
-        .page.active { display: block; }
+        /* Main Content */
+        main { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 90px; }
 
-        /* Event Card */
-        .card { background: var(--card-bg); border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .event-title { font-size: 1.1rem; font-weight: 600; }
-        .time-elapsed { font-size: 1.5rem; font-weight: 800; color: var(--primary); margin: 10px 0; }
+        /* Hero Section (Pinned Event) */
+        .hero-section { margin-bottom: 25px; }
+        .hero-label { font-size: 0.85rem; color: var(--text-sub); margin-bottom: 8px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+        
+        .hero-card { background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); color: white; border-radius: 20px; padding: 25px; box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4); position: relative; }
+        .hero-card .event-title { font-size: 1.4rem; font-weight: 600; opacity: 0.95; }
+        .hero-card .time-elapsed { font-size: 2.5rem; font-weight: 800; margin: 15px 0; line-height: 1.1; }
+        .hero-card .last-date { font-size: 0.9rem; opacity: 0.8; margin-bottom: 20px; }
+        .hero-card .btn-primary { background: white; color: var(--primary); font-weight: bold; border: none; }
+        .hero-card .btn-outline { color: white; border-color: rgba(255,255,255,0.3); }
+        .hero-card .menu-btn { color: white; }
+
+        /* Standard List Section */
+        .list-label { font-size: 0.9rem; color: var(--text-sub); margin-bottom: 10px; font-weight: 600; margin-top: 10px; }
+        .card { background: var(--card-bg); border-radius: 16px; padding: 20px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid var(--border); position: relative; }
+        
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; }
+        .event-title { font-size: 1.1rem; font-weight: 600; color: var(--text-main); }
+        .time-elapsed { font-size: 1.6rem; font-weight: 700; color: var(--primary); margin: 8px 0; }
         .last-date { font-size: 0.85rem; color: var(--text-sub); }
 
+        /* Menu (Three Dots) */
+        .menu-container { position: relative; }
+        .menu-btn { background: none; border: none; padding: 5px; cursor: pointer; color: #9CA3AF; border-radius: 50%; transition: background 0.2s; }
+        .menu-btn:hover { background: rgba(0,0,0,0.05); color: var(--text-main); }
+        
+        .dropdown { position: absolute; top: 30px; right: 0; background: white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); border: 1px solid var(--border); width: 140px; display: none; z-index: 50; overflow: hidden; }
+        .dropdown.show { display: block; }
+        .dropdown-item { padding: 12px 15px; font-size: 0.9rem; color: var(--text-main); cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.1s; }
+        .dropdown-item:hover { background: var(--bg); }
+        .dropdown-item.danger { color: var(--danger); }
+
         /* Buttons */
-        .btn { border: none; padding: 10px 15px; border-radius: 8px; font-size: 0.9rem; cursor: pointer; font-weight: 500; transition: opacity 0.2s; width: 100%; text-align: center; }
-        .btn:active { opacity: 0.7; }
-        .btn-primary { background-color: var(--primary); color: white; margin-top: 10px; }
-        .btn-outline { background-color: transparent; border: 1px solid #E5E7EB; color: var(--text-sub); margin-top: 8px; }
-        .btn-danger { background-color: var(--danger); color: white; margin-top: 20px; }
-
-        /* History Section */
-        .history-list { margin-top: 15px; border-top: 1px solid #E5E7EB; padding-top: 10px; display: none; }
-        .history-list.show { display: block; }
-        .history-item { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-sub); padding: 5px 0; border-bottom: 1px dashed #eee; }
-        .btn-del-history { color: var(--danger); background: none; border: none; cursor: pointer; font-size: 0.8rem; }
-
-        /* Modal (Add Event) */
-        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 100; }
-        .modal.show { display: flex; }
-        .modal-content { background: white; padding: 25px; border-radius: 12px; width: 85%; max-width: 300px; }
-        input[type="text"] { width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 6px; margin: 15px 0; font-size: 1rem; }
+        .btn { border: none; padding: 12px; border-radius: 10px; font-size: 0.95rem; cursor: pointer; font-weight: 500; width: 100%; text-align: center; transition: transform 0.1s; }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background-color: var(--primary); color: white; margin-top: 10px; box-shadow: 0 2px 5px rgba(79, 70, 229, 0.2); }
+        .btn-outline { background-color: transparent; border: 1px solid var(--border); color: var(--text-sub); margin-top: 8px; }
+        
+        /* History List */
+        .history-list { margin-top: 15px; border-top: 1px solid rgba(0,0,0,0.08); padding-top: 10px; display: none; }
+        .hero-card .history-list { border-top-color: rgba(255,255,255,0.2); }
+        .history-item { display: flex; justify-content: space-between; font-size: 0.85rem; padding: 8px 0; border-bottom: 1px dashed rgba(0,0,0,0.1); opacity: 0.8; }
+        .hero-card .history-item { border-bottom-color: rgba(255,255,255,0.2); color: white; }
 
         /* Navbar */
-        .navbar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-top: 1px solid #E5E7EB; display: flex; justify-content: space-around; align-items: center; padding: 10px 0; padding-bottom: max(10px, env(safe-area-inset-bottom)); box-shadow: 0 -2px 10px rgba(0,0,0,0.03); }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-sub); font-size: 0.75rem; border: none; background: none; cursor: pointer; flex: 1; }
+        .navbar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; border-top: 1px solid var(--border); display: flex; justify-content: space-around; align-items: center; padding: 8px 0; padding-bottom: max(10px, env(safe-area-inset-bottom)); box-shadow: 0 -4px 20px rgba(0,0,0,0.02); z-index: 20; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #9CA3AF; font-size: 0.7rem; background: none; border: none; cursor: pointer; flex: 1; padding: 5px; }
         .nav-item.active { color: var(--primary); }
-        .nav-icon { font-size: 1.4rem; margin-bottom: 2px; }
+        .nav-item svg { margin-bottom: 4px; }
         
-        /* The Big Plus Button */
-        .nav-add-btn { background: var(--primary); color: white; width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.8rem; border: none; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.4); transform: translateY(-15px); cursor: pointer; }
+        .nav-add-btn { background: var(--primary); color: white; width: 56px; height: 56px; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: none; box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3); transform: translateY(-20px); cursor: pointer; transition: transform 0.2s; }
+        .nav-add-btn:active { transform: translateY(-20px) scale(0.95); }
+
+        /* Modal */
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(2px); }
+        .modal.show { display: flex; }
+        .modal-content { background: white; padding: 25px; border-radius: 20px; width: 85%; max-width: 320px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+        input[type="text"] { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin: 15px 0; font-size: 1rem; background: var(--bg); }
+        
+        .page { display: none; }
+        .page.active { display: block; }
     </style>
 </head>
 <body>
 
-    <header id="header-title">我的時間紀錄</header>
-
-    <main>
+    <main onclick="closeAllMenus(event)">
         <div id="home-page" class="page active">
+            <div id="hero-container"></div>
+            
+            <div id="list-label" class="list-label" style="display:none;">其他事項</div>
             <div id="event-list"></div>
-            <div id="empty-state" style="text-align: center; color: #9CA3AF; margin-top: 50px; display: none;">
+            
+            <div id="empty-state" style="text-align: center; color: var(--text-sub); margin-top: 100px; display: none;">
+                <div style="font-size: 3rem; margin-bottom: 10px; opacity: 0.3;">📝</div>
                 還沒有紀錄事項<br>點擊下方 + 新增一個吧！
             </div>
         </div>
 
         <div id="settings-page" class="page">
+            <header style="background:transparent; border:none; margin-bottom:10px; justify-content: flex-start; padding-left: 0;">設定</header>
             <div class="card">
                 <div class="event-title">資料管理</div>
-                <p style="color: var(--text-sub); font-size: 0.9rem;">所有資料都儲存在您的瀏覽器中。</p>
-                <button class="btn btn-danger" onclick="clearAllData()">⚠️ 清除所有資料</button>
-            </div>
-            <div class="card">
-                <div class="event-title">關於</div>
-                <p style="color: var(--text-sub); font-size: 0.9rem;">這是一個簡易的時間追蹤工具，幫助你記憶上次做某件事的時間。</p>
+                <p style="color: var(--text-sub); font-size: 0.9rem; margin: 10px 0;">所有資料都儲存在您的瀏覽器中。</p>
+                <button class="btn btn-outline" style="color: var(--danger); border-color: var(--danger);" onclick="clearAllData()">⚠️ 清除所有資料</button>
             </div>
         </div>
     </main>
@@ -91,39 +120,38 @@
     <div id="add-modal" class="modal">
         <div class="modal-content">
             <div class="event-title">新增追蹤事項</div>
-            <input type="text" id="new-event-name" placeholder="例如：換床單、澆水...">
+            <input type="text" id="new-event-name" placeholder="輸入事項名稱...">
             <div style="display: flex; gap: 10px;">
                 <button class="btn btn-outline" onclick="closeModal()">取消</button>
                 <button class="btn btn-primary" onclick="saveNewEvent()">確認新增</button>
             </div>
         </div>
-    </div>
+    </main>
 
     <nav class="navbar">
         <button class="nav-item active" onclick="switchPage('home')">
-            <span class="nav-icon">🏠</span>
-            <span>主頁</span>
+            <svg class="icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            <span style="margin-top:2px">主頁</span>
         </button>
         <button class="nav-add-btn" onclick="openModal()">
-            +
+            <svg class="icon" style="width:32px; height:32px;" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
         </button>
         <button class="nav-item" onclick="switchPage('settings')">
-            <span class="nav-icon">⚙️</span>
-            <span>設定</span>
+            <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <span style="margin-top:2px">設定</span>
         </button>
     </nav>
 
     <script>
-        // --- 資料結構與初始化 ---
-        // Events Array: [{ id: 123, name: "澆水", logs: [timestamp1, timestamp2] }]
-        let events = JSON.parse(localStorage.getItem('myTimeTracker_events')) || [];
+        // --- Data ---
+        let events = JSON.parse(localStorage.getItem('myTimeTracker_events_v2')) || [];
 
         function saveToLocal() {
-            localStorage.setItem('myTimeTracker_events', JSON.stringify(events));
+            localStorage.setItem('myTimeTracker_events_v2', JSON.stringify(events));
             renderEvents();
         }
 
-        // --- 時間格式化邏輯 ---
+        // --- Helpers ---
         function formatDuration(ms) {
             if (!ms) return "尚未執行";
             const seconds = Math.floor(ms / 1000);
@@ -138,12 +166,11 @@
         }
 
         function formatDate(timestamp) {
-            return new Date(timestamp).toLocaleString('zh-TW', { hour12: false });
+            return new Date(timestamp).toLocaleString('zh-TW', { hour12: false, month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
         }
 
-        // --- 核心功能 ---
-
-        // 1. 新增事件
+        // --- Core Logic ---
+        
         function openModal() {
             document.getElementById('add-modal').classList.add('show');
             document.getElementById('new-event-name').focus();
@@ -156,109 +183,179 @@
 
         function saveNewEvent() {
             const name = document.getElementById('new-event-name').value.trim();
-            if (!name) return alert('請輸入名稱');
+            if (!name) return;
             
-            const newEvent = {
+            // 如果是第一個事件，自動設為置頂
+            const isFirst = events.length === 0;
+
+            events.push({
                 id: Date.now(),
                 name: name,
-                logs: [] // 初始沒有紀錄
-            };
-            
-            events.push(newEvent);
+                logs: [],
+                isPinned: isFirst 
+            });
             saveToLocal();
             closeModal();
             switchPage('home');
         }
 
-        // 2. 紀錄時間 (打卡)
         function logTime(id) {
             const event = events.find(e => e.id === id);
             if (event) {
-                event.logs.unshift(Date.now()); // 加到最前面
+                event.logs.unshift(Date.now());
                 saveToLocal();
             }
         }
 
-        // 3. 刪除特定歷史紀錄
         function deleteLog(eventId, logIndex) {
-            if(confirm('確定刪除這條紀錄嗎？')) {
+            if(confirm('刪除此條歷史紀錄？')) {
                 const event = events.find(e => e.id === eventId);
                 event.logs.splice(logIndex, 1);
                 saveToLocal();
             }
         }
 
-        // 4. 刪除整個事件
         function deleteEvent(id) {
-            if(confirm('確定刪除這個事件與所有紀錄嗎？')) {
+            if(confirm('確定刪除此事件？此操作無法復原。')) {
                 events = events.filter(e => e.id !== id);
                 saveToLocal();
             }
         }
 
-        // 5. 切換歷史顯示
-        function toggleHistory(id) {
-            const el = document.getElementById(`history-${id}`);
-            if (el.style.display === 'block') {
-                el.style.display = 'none';
+        function togglePin(id) {
+            // 邏輯：只能有一個置頂。如果點擊已置頂的，則取消置頂。
+            // 如果點擊未置頂的，則將其他取消置頂，並置頂當前這個。
+            const target = events.find(e => e.id === id);
+            if (target.isPinned) {
+                target.isPinned = false;
             } else {
-                el.style.display = 'block';
+                events.forEach(e => e.isPinned = false); // 清除其他
+                target.isPinned = true;
             }
+            saveToLocal();
         }
 
-        // --- 渲染畫面 (UI) ---
-        function renderEvents() {
-            const list = document.getElementById('event-list');
-            const emptyState = document.getElementById('empty-state');
-            
-            list.innerHTML = '';
-            
-            if (events.length === 0) {
-                emptyState.style.display = 'block';
-                return;
-            } else {
-                emptyState.style.display = 'none';
-            }
+        function toggleHistory(id) {
+            const el = document.querySelector(`#card-${id} .history-list`);
+            el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+        }
 
-            // 根據上次執行時間排序 (越久沒做的排越上面? 或者固定的? 這裡暫設為固定新增順序，可改)
-            events.forEach(evt => {
-                const lastLog = evt.logs.length > 0 ? evt.logs[0] : null;
-                const timeDiff = lastLog ? Date.now() - lastLog : null;
-                const displayTime = lastLog ? formatDuration(timeDiff) : "尚未執行";
-                
-                // 歷史紀錄 HTML
-                let historyHtml = '';
-                evt.logs.forEach((log, index) => {
-                    historyHtml += `
-                        <div class="history-item">
-                            <span>${formatDate(log)}</span>
-                            <button class="btn-del-history" onclick="deleteLog(${evt.id}, ${index})">刪除</button>
-                        </div>
-                    `;
-                });
+        // --- Menu Logic ---
+        function toggleMenu(event, id) {
+            event.stopPropagation(); // 防止冒泡觸發 body click
+            // 關閉其他已開啟的選單
+            document.querySelectorAll('.dropdown').forEach(d => {
+                if (d.id !== `menu-${id}`) d.classList.remove('show');
+            });
+            
+            const menu = document.getElementById(`menu-${id}`);
+            menu.classList.toggle('show');
+        }
 
-                const card = document.createElement('div');
-                card.className = 'card';
-                card.innerHTML = `
+        function closeAllMenus(event) {
+            document.querySelectorAll('.dropdown').forEach(d => d.classList.remove('show'));
+        }
+
+        // --- Rendering ---
+        
+        function generateCardHTML(evt, isHero) {
+            const lastLog = evt.logs.length > 0 ? evt.logs[0] : null;
+            const timeDiff = lastLog ? Date.now() - lastLog : null;
+            const displayTime = lastLog ? formatDuration(timeDiff) : "尚未執行";
+            
+            let historyHtml = '';
+            evt.logs.forEach((log, index) => {
+                historyHtml += `
+                    <div class="history-item">
+                        <span>${formatDate(log)}</span>
+                        <button style="background:none;border:none;color:${isHero?'#fff':'var(--danger)'};cursor:pointer;" onclick="deleteLog(${evt.id}, ${index})">✕</button>
+                    </div>
+                `;
+            });
+
+            // SVG Icons
+            const iconPin = `<svg class="icon-sm" viewBox="0 0 24 24"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>`;
+            const iconTrash = `<svg class="icon-sm" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`;
+            const iconDots = `<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>`;
+
+            const pinText = evt.isPinned ? "取消置頂" : "設為置頂";
+            const containerClass = isHero ? 'hero-card' : 'card';
+            const btnClass = isHero ? 'btn-primary' : 'btn-primary'; // Hero button is styled via CSS selector
+            const outlineBtnClass = isHero ? 'btn-outline' : 'btn-outline';
+
+            return `
+                <div class="${containerClass}" id="card-${evt.id}">
                     <div class="card-header">
                         <div class="event-title">${evt.name}</div>
-                        <button style="border:none;background:none;color:#999;" onclick="deleteEvent(${evt.id})">✕</button>
+                        
+                        <div class="menu-container">
+                            <button class="menu-btn" onclick="toggleMenu(event, ${evt.id})">${iconDots}</button>
+                            <div id="menu-${evt.id}" class="dropdown">
+                                <div class="dropdown-item" onclick="togglePin(${evt.id})">
+                                    ${iconPin} ${pinText}
+                                </div>
+                                <div class="dropdown-item danger" onclick="deleteEvent(${evt.id})">
+                                    ${iconTrash} 刪除
+                                </div>
+                            </div>
+                        </div>
                     </div>
+
                     <div class="last-date">${lastLog ? '上次：' + formatDate(lastLog) : '新事件'}</div>
                     <div class="time-elapsed">${displayTime}</div>
                     
-                    <button class="btn btn-primary" onclick="logTime(${evt.id})">✔️ 剛剛做了</button>
-                    <button class="btn btn-outline" onclick="toggleHistory(${evt.id})">📋 歷史紀錄</button>
+                    <button class="btn ${btnClass}" onclick="logTime(${evt.id})">✔️ 立即紀錄</button>
+                    <button class="btn ${outlineBtnClass}" onclick="toggleHistory(${evt.id})">📋 歷史紀錄</button>
                     
-                    <div id="history-${evt.id}" class="history-list">
-                        ${historyHtml || '<div style="text-align:center;padding:10px;">尚無紀錄</div>'}
+                    <div class="history-list">
+                        ${historyHtml || '<div style="opacity:0.6;font-size:0.8rem;padding:5px 0;">尚無紀錄</div>'}
                     </div>
-                `;
-                list.appendChild(card);
-            });
+                </div>
+            `;
         }
 
-        // --- 頁面切換 ---
+        function renderEvents() {
+            const heroContainer = document.getElementById('hero-container');
+            const listContainer = document.getElementById('event-list');
+            const listLabel = document.getElementById('list-label');
+            const emptyState = document.getElementById('empty-state');
+            
+            heroContainer.innerHTML = '';
+            listContainer.innerHTML = '';
+
+            if (events.length === 0) {
+                emptyState.style.display = 'block';
+                listLabel.style.display = 'none';
+                return;
+            }
+            emptyState.style.display = 'none';
+
+            // Find Pinned Event (Priority: explicitly pinned, usually just one)
+            const pinnedEvent = events.find(e => e.isPinned);
+            const otherEvents = events.filter(e => !e.isPinned);
+
+            // Render Hero
+            if (pinnedEvent) {
+                heroContainer.innerHTML = `
+                    <div class="hero-section">
+                        <div class="hero-label">★ 重點關注</div>
+                        ${generateCardHTML(pinnedEvent, true)}
+                    </div>
+                `;
+            }
+
+            // Render List
+            if (otherEvents.length > 0) {
+                listLabel.style.display = pinnedEvent ? 'block' : 'none';
+                otherEvents.forEach(evt => {
+                    listContainer.innerHTML += generateCardHTML(evt, false);
+                });
+            } else {
+                listLabel.style.display = 'none';
+            }
+        }
+
+        // --- Navigation ---
         function switchPage(pageName) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -266,33 +363,26 @@
             if (pageName === 'home') {
                 document.getElementById('home-page').classList.add('active');
                 document.querySelector('.nav-item:nth-child(1)').classList.add('active');
-                document.getElementById('header-title').innerText = "我的時間紀錄";
             } else if (pageName === 'settings') {
                 document.getElementById('settings-page').classList.add('active');
                 document.querySelector('.nav-item:nth-child(3)').classList.add('active');
-                document.getElementById('header-title').innerText = "設定";
             }
         }
 
         function clearAllData() {
-            if(confirm("這將會刪除所有資料且無法復原！確定嗎？")) {
-                localStorage.removeItem('myTimeTracker_events');
+            if(confirm("警告：這將會刪除所有資料！")) {
+                localStorage.removeItem('myTimeTracker_events_v2');
                 events = [];
                 renderEvents();
                 alert("資料已清除");
             }
         }
 
-        // --- 啟動與自動更新 ---
-        
-        // 每分鐘更新一次介面上的時間顯示
+        // Auto Refresh Timer
         setInterval(() => {
-            if(document.getElementById('home-page').classList.contains('active')) {
-                renderEvents();
-            }
+            if(document.getElementById('home-page').classList.contains('active')) renderEvents();
         }, 60000);
 
-        // 初始渲染
         renderEvents();
     </script>
 </body>
